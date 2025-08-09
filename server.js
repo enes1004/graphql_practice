@@ -71,10 +71,26 @@ var root = {
     return users.find(user => user.id === id)
   },
   createUser: ({ input }) => {
+    // Input validation
+    if (!input.name || input.name.trim() === '') {
+      throw new Error('Name is required and cannot be empty')
+    }
+    if (!input.email || input.email.trim() === '') {
+      throw new Error('Email is required and cannot be empty')
+    }
+    if (!input.email.includes('@')) {
+      throw new Error('Email must be a valid email address')
+    }
+
+    // Check for duplicate email
+    if (users.find(user => user.email === input.email)) {
+      throw new Error('User with this email already exists')
+    }
+
     const newUser = {
       id: nextUserId.toString(),
-      name: input.name,
-      email: input.email,
+      name: input.name.trim(),
+      email: input.email.trim().toLowerCase(),
       createdAt: new Date().toISOString()
     }
     users.push(newUser)
@@ -84,12 +100,31 @@ var root = {
   updateUser: ({ id, input }) => {
     const userIndex = users.findIndex(user => user.id === id)
     if (userIndex === -1) {
-      return null
+      throw new Error('User not found')
+    }
+    
+    // Validation for update inputs
+    if (input.name !== undefined && input.name.trim() === '') {
+      throw new Error('Name cannot be empty')
+    }
+    if (input.email !== undefined) {
+      if (input.email.trim() === '') {
+        throw new Error('Email cannot be empty')
+      }
+      if (!input.email.includes('@')) {
+        throw new Error('Email must be a valid email address')
+      }
+      // Check for duplicate email (excluding current user)
+      const existingUser = users.find(user => user.email === input.email && user.id !== id)
+      if (existingUser) {
+        throw new Error('User with this email already exists')
+      }
     }
     
     const updatedUser = {
       ...users[userIndex],
-      ...input
+      ...(input.name !== undefined && { name: input.name.trim() }),
+      ...(input.email !== undefined && { email: input.email.trim().toLowerCase() })
     }
     users[userIndex] = updatedUser
     return updatedUser
@@ -97,7 +132,7 @@ var root = {
   deleteUser: ({ id }) => {
     const userIndex = users.findIndex(user => user.id === id)
     if (userIndex === -1) {
-      return false
+      throw new Error('User not found')
     }
     
     users.splice(userIndex, 1)
